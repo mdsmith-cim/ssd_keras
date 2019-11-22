@@ -20,7 +20,7 @@ limitations under the License.
 from __future__ import division
 import numpy as np
 from math import ceil
-from tqdm import trange
+from tqdm import trange, tqdm
 import sys
 import warnings
 
@@ -267,6 +267,7 @@ class Evaluator:
                            decoding_normalize_coords=True,
                            decoding_border_pixels='include',
                            round_confidences=False,
+                           num_pass = 10,
                            verbose=True,
                            ret=False):
         '''
@@ -375,28 +376,35 @@ class Evaluator:
             # Generate batch.
             batch_X, batch_image_ids, batch_eval_neutral, batch_inverse_transforms, batch_orig_labels = next(generator)
             # Predict.
-            y_pred = self.model.predict(batch_X)
+            y_pred = []
+            for n in range(num_pass):
+                y_pred.append(self.model.predict(batch_X))
+
             # If the model was created in 'training' mode, the raw predictions need to
             # be decoded and filtered, otherwise that's already taken care of.
             if self.model_mode == 'training':
                 # Decode.
-                y_pred = decode_detections(y_pred,
-                                           confidence_thresh=decoding_confidence_thresh,
-                                           iou_threshold=decoding_iou_threshold,
-                                           top_k=decoding_top_k,
-                                           input_coords=decoding_pred_coords,
-                                           normalize_coords=decoding_normalize_coords,
-                                           img_height=img_height,
-                                           img_width=img_width,
-                                           border_pixels=decoding_border_pixels)
+                for n in range(num_pass):
+                    y_pred[n] = decode_detections(y_pred[n],
+                                               confidence_thresh=decoding_confidence_thresh,
+                                               iou_threshold=decoding_iou_threshold,
+                                               top_k=decoding_top_k,
+                                               input_coords=decoding_pred_coords,
+                                               normalize_coords=decoding_normalize_coords,
+                                               img_height=img_height,
+                                               img_width=img_width,
+                                               border_pixels=decoding_border_pixels)
             else:
+                raise Exception('Test mode not supported by MC Dropout')
                 # Filter out the all-zeros dummy elements of `y_pred`.
-                y_pred_filtered = []
-                for i in range(len(y_pred)):
-                    y_pred_filtered.append(y_pred[i][y_pred[i,:,0] != 0])
-                y_pred = y_pred_filtered
+                # y_pred_filtered = []
+                # for i in range(len(y_pred)):
+                #     y_pred_filtered.append(y_pred[i][y_pred[i,:,0] != 0])
+                # y_pred = y_pred_filtered
             # Convert the predicted box coordinates for the original images.
-            y_pred = apply_inverse_transforms(y_pred, batch_inverse_transforms)
+            for n in range(num_pass):
+                y_pred[n] = apply_inverse_transforms(y_pred[n], batch_inverse_transforms)
+
 
             # Iterate over all batch items.
             for k, batch_item in enumerate(y_pred):
