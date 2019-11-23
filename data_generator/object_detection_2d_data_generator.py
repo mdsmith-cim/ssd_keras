@@ -951,9 +951,9 @@ class DataGenerator:
                                    labels_format=self.labels_format)
 
         # Override the labels formats of all the transformations to make sure they are set correctly.
-        if not (self.labels is None):
-            for transform in transformations:
-                transform.labels_format = self.labels_format
+        # if not (self.labels is None):
+        #     for transform in transformations:
+        #         transform.labels_format = self.labels_format
 
         #############################################################################################
         # Generate mini batches.
