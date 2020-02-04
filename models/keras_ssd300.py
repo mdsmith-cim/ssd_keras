@@ -56,7 +56,8 @@ def ssd_300(image_size,
             iou_threshold=0.45,
             top_k=200,
             nms_max_output_size=400,
-            return_predictor_sizes=False):
+            return_predictor_sizes=False,
+            dropout_rate=0.5):
     '''
     Build a Keras model with SSD300 architecture, see references.
 
@@ -296,11 +297,11 @@ def ssd_300(image_size,
 
     fc6 = Conv2D(1024, (3, 3), dilation_rate=(6, 6), activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg), name='fc6')(pool5)
 
-    drop1 = Dropout(0.25)(fc6, training=True) # Enable dropout at test time
+    drop1 = Dropout(dropout_rate)(fc6, training=True) # Enable dropout at test time
 
     fc7 = Conv2D(1024, (1, 1), activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg), name='fc7')(drop1)
 
-    drop2 = Dropout(0.25)(fc7, training=True) # Enable dropout at test time
+    drop2 = Dropout(dropout_rate)(fc7, training=True) # Enable dropout at test time
 
     conv6_1 = Conv2D(256, (1, 1), activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg), name='conv6_1')(drop2)
     conv6_1 = ZeroPadding2D(padding=((1, 1), (1, 1)), name='conv6_padding')(conv6_1)
